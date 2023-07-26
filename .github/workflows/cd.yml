@@ -23,4 +23,11 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --configuration Release --no-restore -o "aps_${{ matrix.os }}"
+    - name: Publish
+      uses: softprops/action-gh-release@v1
+      with:
+        files: "aps_*"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
