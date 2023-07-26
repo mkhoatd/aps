@@ -2,14 +2,14 @@ name: build
 on:
   push:
     branches:
-      - master
+      - 'tags/v*'
+      - 'v*'
 
 env:
   DOTNET_VERSION: '7.0.109'
 
 jobs:
   build:
-    permissions: write-all
     name: build-${{matrix.os}}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -28,11 +28,66 @@ jobs:
         dotnet publish --configuration Release --no-restore -o "aps_${{ matrix.os }}"
     - name: Zip output
       run: zip -qq -r aps_${{ matrix.os }}.zip aps_${{ matrix.os }}
-    - name: Publish
-      run: >-
-        gh release create ${{ github.ref_name }}
-        "aps_${{ matrix.os }}.zip"
-        --generate-notes
-        --title "Version ${{ github.ref_name }}"
+    
+  release:
+    name: Create Github Release
+    if: contains(github.ref, 'tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1.0.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Output Release URL File
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File for publish
+      uses: actions/upload-artifact@v1
+      with:
+        name: release_url
+        path: release_url.txt
+    
+  publish:
+    if: contains(github.ref, 'tags/v')
+    needs: [release]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Build
+      run: |
+        dotnet publish --configuration Release --no-restore -o "aps_${{ matrix.os }}"
+    - name: Zip output
+      run: zip -r aps_${{ matrix.os }}.zip aps_${{ matrix.os }}
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      run: |
+        echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
+        value=`cat release_url/release_url.txt`
+        echo ::set-output name=upload_url::$value
+      env:
+        TAG_REF_NAME: ${{ github.ref }}
+        REPOSITORY_NAME: ${{ github.repository }}
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ./aps_${{ matrix.os}}.zip
+        asset_name: ${{ steps.get_release_info.outputs.file_name }}-aps_${{ matrix.os}}.zip
+        asset_content_type: application/zip
