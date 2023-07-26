@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>aws_profile</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <!-- <PublishAot>true</PublishAot> -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Sharprompt" Version="2.4.5" />
+  </ItemGroup>
+
+</Project>
