@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - dev
 
 env:
   DOTNET_VERSION: '7.0.109'
@@ -29,9 +28,10 @@ jobs:
     - name: Zip output
       run: zip -qq -r aps_${{ matrix.os }}.zip aps_${{ matrix.os }}
     - name: Publish
-      uses: softprops/action-gh-release@v1
-      with:
-        files: "aps*"
+      run: >-
+        gh release create ${{ github.ref_name }}
+        "aps_${{ matrix.os }}.zip"
+        --generate-notes
+        --title "Version ${{ github.ref_name }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
