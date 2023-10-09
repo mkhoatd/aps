@@ -37,16 +37,22 @@ if (!apsConfigContent.Length.Equals(1) || !apsConfigContent[0].Contains("AWS_PRO
 }
 
 apsConfigContent = File.ReadAllText(apsConfigFilePath).Split("\n");
-var zshrc = File.ReadAllText(zshrcFilePath).Split("\n");
+var zshrcContent = File.ReadAllText(zshrcFilePath);
 
-var apsFileLine = zshrc.FirstOrDefault(l => l.Contains("alias aps=\"aps && source ~/aps/.aps_config\""));
+var apsSpecificSetting = """
+                        # >>> aps initialize >>>
+                        # !! Contents within this block are managed by 'aps' !!
+                        source ~/aps/.aps_config
+                        alias aps="aps && source ~/aps/.aps_config"
+                        # <<< aps initialize <<<
+                        """;
 
-if (apsFileLine is null)
+if (!zshrcContent.Contains(apsSpecificSetting))
 {
-    var newZshrc = zshrc.Append("alias aps=\"aps && source ~/aps/.aps_config\"").ToArray();
+    var newZshrc = zshrcContent + apsSpecificSetting;
     var bakZshrcFilePath = Path.Combine(userHomeDir, ".zshrc.bak");
     File.Copy(zshrcFilePath, bakZshrcFilePath, true);
-    File.WriteAllLines(zshrcFilePath, newZshrc);
+    File.WriteAllText(zshrcFilePath, newZshrc);
 }
 
 var profileLine = apsConfigContent[0]!;
@@ -62,6 +68,6 @@ if (oldProfileName != null)
 }
 else
 {
-    var newApsConfigContent = zshrc.Append($"export AWS_PROFILE={newProfileName}");
+    var newApsConfigContent = new string[] { $"export AWS_PROFILE={newProfileName}" };
     File.WriteAllLines(apsConfigFilePath, newApsConfigContent);
 }
